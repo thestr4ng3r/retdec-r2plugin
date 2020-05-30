@@ -7,6 +7,7 @@
  */
 
 #include "R2RetDec.h"
+#include "../src/r2_annotated_code.h"
 
 #include <Cutter.h>
 
@@ -64,7 +65,9 @@ void R2RetDec::decompileAt(RVA addr)
 
 		for(QJsonValueRef error : json["errors"].toArray())
 			code.code += "// " + error.toString() + "\n";
-
+		RAnnotatedCode *codi = r2retdec_decompile_annotated_code(Core()->core());
+		code.code = strdup("HEL");
+		code.code = codi->code;
 		emit finished(code);
 	});
 	task->startTask();
