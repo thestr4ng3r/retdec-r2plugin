@@ -15,6 +15,7 @@
 #include <sstream>
 
 #include <r_util/r_annotated_code.h>
+#include "r2retdec_annotated_code.h"
 
 #include "r2plugin/r2cgen.h"
 #include "r2plugin/r2info.h"

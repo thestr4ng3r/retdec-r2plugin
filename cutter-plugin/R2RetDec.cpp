@@ -7,7 +7,7 @@
  */
 
 #include "R2RetDec.h"
-#include "../src/r2_annotated_code.h"
+#include "../src/r2retdec_annotated_code.h"
 
 #include <Cutter.h>
 
