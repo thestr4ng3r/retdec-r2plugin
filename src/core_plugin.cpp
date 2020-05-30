@@ -307,6 +307,18 @@ static void _cmd(RCore &core, const char &input)
 }
 
 /**
+ * This function is to get RAnnotatedCode to pass it to Cutter's decompiler widget.
+ */
+RAnnotatedCode* r2retdec_decompile_annotated_code(RCore *core){
+	static std::mutex mutex;
+	std::lock_guard<std::mutex> lock (mutex);
+
+	R2InfoProvider binInfo(*core);
+	auto code = decompile(binInfo);
+	return code;
+}
+
+/**
  * R2 console registration method. This method is called
  * after each command typed into r2. If the function wants
  * to respond on provided command, provides response and returns true.
