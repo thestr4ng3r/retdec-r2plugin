@@ -24,5 +24,8 @@ R2RetDec::R2RetDec(QObject *parent)
 void R2RetDec::decompileAt(RVA addr)
 {
 	RAnnotatedCode *code = r2retdec_decompile_annotated_code(Core()->core());
+	if(code == nullptr){
+		code = r_annotated_code_new(strdup ("RetDec Decompiler Error: No function at this offset"));
+	}
 	emit finished(code);
 }
