@@ -30,6 +30,7 @@ public:
 	std::string fetchFilePath() const;
 
 	common::Function fetchCurrentFunction() const;
+	common::Function fetchCurrentFunctionForCutter(ut64 addr) const;
 
 	void fetchFunctionsAndGlobals(config::Config &rdconfig) const;
 

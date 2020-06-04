@@ -14,7 +14,8 @@
 #include <retdec/config/config.h>
 #include <sstream>
 
-#include <AnnotatedCode.h>
+#include <r_util/r_annotated_code.h>
+#include "r2retdec.h"
 
 #include "r2plugin/r2cgen.h"
 #include "r2plugin/r2info.h"
@@ -257,6 +258,57 @@ RAnnotatedCode* decompile(const R2InfoProvider &binInfo)
 }
 
 /**
+ * @brief Main decompilation method. Uses RetDec to decompile input binary.
+ *
+ * Decompiles binary on input by configuring and calling RetDec decompiler script.
+ * Decompiles the binary given by the offset passed addr.
+ * 
+ * @param binInfo Provides informations gathered from r2 console.
+ * @param addr Decompiles the function at this offset.
+ */
+RAnnotatedCode* decompileForCutter(const R2InfoProvider &binInfo, ut64 addr)
+{
+	try {
+		R2CGenerator outgen;
+		auto outDir = getOutDirPath();
+		auto config = retdec::config::Config::empty(
+				(outDir/"rd_config.json").string());
+
+		auto rdpath = fetchRetdecPath();
+
+		std::string binName = binInfo.fetchFilePath();
+		binInfo.fetchFunctionsAndGlobals(config);
+		config.generateJsonFile();
+
+		auto fnc = binInfo.fetchCurrentFunctionForCutter(addr);
+
+		auto decpath = outDir/"rd_dec.json";
+		auto outpath = outDir/"rd_out.log";
+
+		std::ostringstream decrange;
+		decrange << fnc.getStart() << "-" << fnc.getEnd();
+
+		std::vector<std::string> decparams {
+			sanitizePath(binName),
+			"--cleanup",
+			"--config", sanitizePath(config.getConfigFileName()),
+			"-f", "json-human",
+			//"--select-decode-only",
+			"--select-ranges", decrange.str(),
+			"-o", sanitizePath(decpath.string())
+
+		};
+
+		run(sanitizePath(rdpath), decparams, sanitizePath(outpath.string()));
+		return outgen.generateOutput(decpath.string());
+	}
+	catch (const DecompilationError &err) {
+		std::cerr << "retdec-r2plugin: " << err.what() << std::endl;
+		return nullptr;
+	}
+}
+
+/**
  * Main function representing plugin behavior. Executes actions
  * based on suffix.
  */
@@ -267,24 +319,24 @@ static void _cmd(RCore &core, const char &input)
 	switch (input) {
 		case '\0':
 			outputFunction = [](RAnnotatedCode *code) -> void {
-				r_annotated_code_print(code, nullptr);
+				r_core_annotated_code_print(code, nullptr);
 			};
 			break;
 
 		case 'o':
 			outputFunction = [](RAnnotatedCode *code) -> void {
 				RVector *offsets = r_annotated_code_line_offsets(code);
-				r_annotated_code_print(code, offsets);
+				r_core_annotated_code_print(code, offsets);
 				r_vector_free(offsets);
 			};
 			break;
 
 		case 'j':
-			outputFunction = r_annotated_code_print_json;
+			outputFunction = r_core_annotated_code_print_json;
 			break;
 
 		case '*':
-			outputFunction = r_annotated_code_print_comment_cmds;
+			outputFunction = r_core_annotated_code_print_comment_cmds;
 			break;
 
 		default:
@@ -304,6 +356,17 @@ static void _cmd(RCore &core, const char &input)
 	}
 
 	outputFunction(code);
+}
+
+/**
+ * This function is to get RAnnotatedCode to pass it to Cutter's decompiler widget.
+ */
+RAnnotatedCode* r2retdec_decompile_annotated_code(RCore *core, ut64 addr){
+	static std::mutex mutex;
+	std::lock_guard<std::mutex> lock (mutex);
+
+	R2InfoProvider binInfo(*core);
+	return decompileForCutter(binInfo, addr);
 }
 
 /**
